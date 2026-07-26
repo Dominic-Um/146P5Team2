@@ -250,6 +250,6 @@ def metrics(levelStr):
 if __name__ == "__main__":
     name = sys.argv[1]
     with open(name, 'r') as openFile:
-        lines = openFile.readlines()
+        lines = [list(line.rstrip('\n')) for line in openFile.readlines()]
     print(len(lines), len(lines[0]))
     print(metrics(lines))

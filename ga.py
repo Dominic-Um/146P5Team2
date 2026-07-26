@@ -79,6 +79,7 @@ class Individual_Grid(object):
 
     # Create zero or more children from self and other
     def generate_children(self, other):
+<<<<<<< HEAD
         new_genome = copy.deepcopy(self.genome)
     
         left = 1
@@ -94,6 +95,35 @@ class Individual_Grid(object):
         new_genome = self.mutate(new_genome)
     
         return (Individual_Grid(new_genome),)
+=======
+        # STUDENT: single-point crossover, done *by column*.
+        #
+        # Why by column rather than by individual tile (uniform crossover)?  Mario
+        # levels have a lot of vertically-coherent structure -- a pipe, a stack of
+        # blocks, a staircase -- that spans multiple rows at the same x position.
+        # If we crossed over tile-by-tile, we'd almost always shred those vertical
+        # structures into nonsense (half a pipe, a floating block with no support).
+        # Swapping whole columns keeps each column internally consistent with
+        # whichever parent it came from, while still mixing the two parents'
+        # layouts left-to-right.
+        left = 1
+        right = width - 1
+        crossover_point = random.randint(left, right - 1)
+
+        new_genome1 = copy.deepcopy(self.genome)
+        new_genome2 = copy.deepcopy(other.genome)
+        for y in range(height):
+            # Child 1: self's columns up to the crossover point, then other's.
+            new_genome1[y][crossover_point:right] = other.genome[y][crossover_point:right]
+            # Child 2: the complementary split, so nothing either parent
+            # contributed is ever thrown away.
+            new_genome2[y][crossover_point:right] = self.genome[y][crossover_point:right]
+
+        # do mutation
+        new_genome1 = self.mutate(new_genome1)
+        new_genome2 = self.mutate(new_genome2)
+        return (Individual_Grid(new_genome1), Individual_Grid(new_genome2))
+>>>>>>> Added selection/crossover/mutations
 
     # Turn the genome into a level string (easy for this genome)
     def to_level(self):
@@ -348,14 +378,52 @@ class Individual_DE(object):
 Individual = Individual_Grid
 
 
+def tournament_select(population, tournament_size=5):
+    """Tournament selection: pick `tournament_size` individuals at random and
+    return the fittest one.  Small tournaments keep selection pressure gentle
+    (more diversity survives); large tournaments converge faster but risk
+    losing diversity.  A size of ~5 out of a population of ~480 is a common
+    middle ground."""
+    contenders = random.sample(population, min(tournament_size, len(population)))
+    return max(contenders, key=Individual.fitness)
+
+
 def generate_successors(population):
     results = []
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
+
+    pop_size = len(population)
+
+    # --- Strategy 1: Elitism ---
+    # Carry the best few individuals forward unchanged.  This guarantees the
+    # population's best fitness never regresses from one generation to the
+    # next, which pure stochastic selection doesn't guarantee on its own.
+    elite_fraction = 0.05
+    elite_count = max(1, int(pop_size * elite_fraction))
+    elites = sorted(population, key=Individual.fitness, reverse=True)[:elite_count]
+    results.extend(elites)
+
+    # --- Strategy 2: Tournament selection ---
+    # Fill the rest of the population by repeatedly picking two parents via
+    # tournament selection and breeding them.  Tournament selection biases
+    # reproduction toward fitter individuals (exploitation) while still
+    # giving weaker individuals *some* chance of being picked (exploration),
+    # since a tournament can happen to be drawn entirely from weaker
+    # individuals.
+    while len(results) < pop_size:
+        parent1 = tournament_select(population)
+        parent2 = tournament_select(population)
+        children = parent1.generate_children(parent2)
+        for child in children:
+            if len(results) < pop_size:
+                results.append(child)
+
     return results
 
 
 def ga():
+    os.makedirs("levels", exist_ok=True)
     # STUDENT Feel free to play with this parameter
     pop_limit = 480
     # Code to parallelize some computations
@@ -394,8 +462,26 @@ def ga():
                             f.write("".join(row) + "\n")
                 generation += 1
                 # STUDENT Determine stopping condition
-                stop_condition = False
+                # Stop after a fixed generation cap, OR if the best fitness hasn't
+                # improved in `stagnation_limit` generations (the search has
+                # converged and is unlikely to keep improving).  ctrl-c still
+                # works too if you want to stop earlier by hand.
+                max_generations = 500
+                stagnation_limit = 40
+                if generation == 1:
+                    best_seen = float('-inf')
+                    stagnant_for = 0
+                else:
+                    current_best = max(population, key=Individual.fitness).fitness()
+                    if current_best > best_seen:
+                        best_seen = current_best
+                        stagnant_for = 0
+                    else:
+                        stagnant_for += 1
+                stop_condition = (generation >= max_generations) or (stagnant_for >= stagnation_limit)
                 if stop_condition:
+                    print("Stopping: " + ("reached max generations" if generation >= max_generations
+                                           else "fitness stagnant for " + str(stagnation_limit) + " generations"))
                     break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
