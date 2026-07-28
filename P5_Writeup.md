@@ -14,7 +14,7 @@
 
 **Stopping condition:** Stops automatically after 500 generations or 40 generations without fitness improvement (whichever first). Ctrl-C still works manually.
 
-**Fitness function (`calculate_fitness`):** : We increased the solvability weight from 2.0 to 4.0 to prioritize playability as the top selection criterion. We also increased meaningfulJumpVariance (0.5 to 0.8) and pathPercentage (0.5 to 0.7) to encourage varied challenges and clear walkable paths. These changes ensure the algorithm generates playable, engaging levels that improve over generations.
+**Fitness function (`calculate_fitness`):** : We increased the solvability weight from 2.0 to 4.0 so the algorithm would make levels with better playability. We also increased meaningfulJumpVariance (0.5 to 0.8) and pathPercentage (0.5 to 0.7) to encourage variable challenges and clear walkable paths. These changes were made so the algorithm generates playable, engaging levels that improve over generations.
 
 **Fix (`metrics.py`):** Fixed an issue where running `python3 metrics.py <file>` from the command line kept each line's trailing `\n`, which the pathfinder misread as an extra gap tile. It made it that sometimes, making a solvable level looked unsolvable.
 
