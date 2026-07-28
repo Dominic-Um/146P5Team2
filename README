@@ -1,1 +1,2 @@
-
+Dominic: Calculate_fitness(), initial versions of mutate() and generate_children()
+Oliver: Writeup, generate_succesors(), revised some of the previous functions.
